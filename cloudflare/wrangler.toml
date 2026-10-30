@@ -1,6 +1,18 @@
-# Worker da Meta Conversions API (a ser criado). O banco D1 já existe e tem o schema de schema.sql.
+# Worker da Meta Conversions API: recebe o lead do quiz, grava no D1 e envia para a Meta.
+# Segredo necessário (não fica aqui): META_ACCESS_TOKEN.
 name = "gedez-capi"
+main = "src/index.js"
 compatibility_date = "2026-10-01"
+
+[vars]
+META_PIXEL_ID = "751852001026491"
+GRAPH_API_VERSION = "v24.0"
+ALLOWED_ORIGINS = "https://gedezcred.simulead.com.br,https://marcosviniiciusfs-png.github.io"
+# META_TEST_EVENT_CODE = "TEST12345"  # descomente para ver os eventos em "Testar eventos" da Meta
+
+# Reenvia eventos pendentes/falhos a cada 15 minutos.
+[triggers]
+crons = ["*/15 * * * *"]
 
 [[d1_databases]]
 binding = "DB"
