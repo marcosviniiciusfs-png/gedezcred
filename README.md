@@ -18,4 +18,4 @@ Aqui, `lead-handler.js` faz o envio:
 Para configurar, edite o topo de `lead-handler.js`.
 
 ## Rastreamento
-Meta Pixel (751852001026491) e GTM (GTM-NW52SR62) foram mantidos, mas só disparam em domínio real — nunca em localhost.
+Meta Pixel (751852001026491) só dispara em domínio real — nunca em localhost. O Lead do quiz também vai pela Conversions API (Worker em cloudflare/), com o mesmo event_id. O GTM (GTM-NW52SR62), que só carregava o Pixel 366621093076850, foi removido.
