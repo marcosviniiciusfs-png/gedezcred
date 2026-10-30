@@ -1,0 +1,8 @@
+# Worker da Meta Conversions API (a ser criado). O banco D1 já existe e tem o schema de schema.sql.
+name = "gedez-capi"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gedez-capi"
+database_id = "ecd07f3c-b681-4dae-b839-bc1101ef8590"
