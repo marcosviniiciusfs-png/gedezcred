@@ -33,6 +33,13 @@ CREATE TABLE IF NOT EXISTS capi_events (
   meta_response     TEXT,                             -- JSON devolvido pela Graph API
   fbtrace_id        TEXT,
   sent_at           INTEGER,
+
+  -- envio para o CRM (Convex)
+  crm_status        TEXT    CHECK (crm_status IN ('sent', 'failed', 'skipped')),
+  crm_id            TEXT,
+  crm_response      TEXT,
+  crm_sent_at       INTEGER,
+
   created_at        INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
