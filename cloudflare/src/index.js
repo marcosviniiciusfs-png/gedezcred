@@ -36,7 +36,7 @@ export default {
       row.fbp, row.fbc, row.client_ip, row.client_user_agent, row.custom_data, row.utm
     ).run();
 
-    if (res.meta.changes) ctx.waitUntil(Promise.all([sendToMeta(env, row.event_id), sendToCrm(env, row.event_id, body)]));
+    if (res.meta.changes) ctx.waitUntil(Promise.all([sendToMeta(env, row.event_id), sendToCrm(env, row.event_id, body), sendToKairoz(env, row.event_id, body)]));
     return json({ ok: true, event_id: row.event_id, duplicate: !res.meta.changes }, 200, cors);
   },
 
@@ -132,13 +132,31 @@ async function sendToCrm(env, eventId, body) {
   const nome = String(body.name || '').trim().replace(/\s+/g, ' ').slice(0, 120);
   const telefone = normalizePhone(body.phone);
   if (!env.CRM_URL || !env.CRM_TOKEN || !nome || !telefone) {
-    await saveCrm(env, eventId, 'skipped', null, JSON.stringify({ reason: !nome || !telefone ? 'nome_ou_telefone_invalido' : 'crm_nao_configurado' }));
+    await saveDelivery(env, 'crm', eventId, { status: 'skipped', id: null, text: JSON.stringify({ reason: !nome || !telefone ? 'nome_ou_telefone_invalido' : 'crm_nao_configurado' }) });
     return;
   }
 
+  const result = await postWebhook(env.CRM_URL, { Authorization: `Bearer ${env.CRM_TOKEN}` }, leadPayload(env, eventId, body, nome, telefone));
+  await saveDelivery(env, 'crm', eventId, result);
+}
+
+// Segundo destino dos leads. A URL contém o token, por isso fica em um segredo do Worker.
+async function sendToKairoz(env, eventId, body) {
+  const nome = String(body.name || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+  const telefone = normalizePhone(body.phone);
+  if (!env.KAIROZ_WEBHOOK_URL || !nome || !telefone) {
+    await saveDelivery(env, 'kairoz', eventId, { status: 'skipped', id: null, text: JSON.stringify({ reason: !nome || !telefone ? 'nome_ou_telefone_invalido' : 'kairoz_nao_configurado' }) });
+    return;
+  }
+
+  const result = await postWebhook(env.KAIROZ_WEBHOOK_URL, {}, leadPayload(env, eventId, body, nome, telefone));
+  await saveDelivery(env, 'kairoz', eventId, result);
+}
+
+function leadPayload(env, eventId, body, nome, telefone) {
   const answers = sanitizeAnswers(body.answers);
   const utm = body.utm && typeof body.utm === 'object' ? body.utm : {};
-  const payload = {
+  return {
     nome,
     telefone,
     tipo: env.CRM_TIPO || 'Simulação de crédito',
@@ -151,15 +169,17 @@ async function sendToCrm(env, eventId, body) {
     utm_content: utm.utm_content, utm_term: utm.utm_term,
     event_id: eventId,
   };
+}
 
+async function postWebhook(url, headers, payload) {
   let status = 'failed';
   let text = '';
-  let crmId = null;
+  let id = null;
   for (let attempt = 0; attempt < 2 && status !== 'sent'; attempt++) {
     try {
-      const r = await fetch(env.CRM_URL, {
+      const r = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.CRM_TOKEN}` },
+        headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
       });
       text = await r.text();
@@ -167,7 +187,7 @@ async function sendToCrm(env, eventId, body) {
       try { data = JSON.parse(text); } catch {}
       if (r.ok && data.success !== false) {
         status = 'sent';
-        crmId = data.id != null ? String(data.id) : null;
+        id = (data.id ?? data.lead_id) != null ? String(data.id ?? data.lead_id) : null;
       } else if (r.status < 500) {
         break; // erro de validação/autorização: repetir não resolve
       }
@@ -175,13 +195,14 @@ async function sendToCrm(env, eventId, body) {
       text = JSON.stringify({ error: String(err) });
     }
   }
-  await saveCrm(env, eventId, status, crmId, text);
+  return { status, id, text };
 }
 
-function saveCrm(env, eventId, status, crmId, response) {
+function saveDelivery(env, target, eventId, { status, id, text }) {
+  const c = target === 'kairoz' ? 'kairoz' : 'crm';
   return env.DB.prepare(
-    `UPDATE capi_events SET crm_status = ?, crm_id = ?, crm_response = ?, crm_sent_at = unixepoch() WHERE event_id = ?`
-  ).bind(status, crmId, (response || '').slice(0, 2000), eventId).run();
+    `UPDATE capi_events SET ${c}_status = ?, ${c}_id = ?, ${c}_response = ?, ${c}_sent_at = unixepoch() WHERE event_id = ?`
+  ).bind(status, id, (text || '').slice(0, 2000), eventId).run();
 }
 
 function corsHeaders(request, env) {

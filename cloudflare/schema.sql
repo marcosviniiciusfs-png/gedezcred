@@ -40,6 +40,12 @@ CREATE TABLE IF NOT EXISTS capi_events (
   crm_response      TEXT,
   crm_sent_at       INTEGER,
 
+  -- envio para o CRM Kairoz
+  kairoz_status     TEXT    CHECK (kairoz_status IN ('sent', 'failed', 'skipped')),
+  kairoz_id         TEXT,
+  kairoz_response   TEXT,
+  kairoz_sent_at    INTEGER,
+
   created_at        INTEGER NOT NULL DEFAULT (unixepoch())
 );
 

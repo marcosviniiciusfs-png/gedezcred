@@ -1,6 +1,6 @@
 # Worker da Meta Conversions API: recebe o lead do quiz, grava no D1 e envia para a Meta.
-# Também envia cada lead para o CRM Convex.
-# Segredos (não ficam aqui): META_ACCESS_TOKEN, CRM_TOKEN.
+# Também envia cada lead para os CRMs Convex e Kairoz.
+# Segredos (não ficam aqui): META_ACCESS_TOKEN, CRM_TOKEN, KAIROZ_WEBHOOK_URL.
 name = "gedez-capi"
 main = "src/index.js"
 compatibility_date = "2026-10-01"
