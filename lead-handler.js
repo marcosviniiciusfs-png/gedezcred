@@ -39,11 +39,13 @@ document.addEventListener('submit', function (ev) {
 
   var answers = [];
   form.querySelectorAll('[name^="form_fields["]').forEach(function (el) {
+    var value = el.value.trim();
+    if (!value) return; // pergunta opcional deixada em branco
     var label = form.querySelector('label[for="' + el.id + '"]');
     answers.push({
       field: el.name.slice(12, -1),
       label: label ? label.textContent.trim() : el.name,
-      value: el.value.trim()
+      value: value
     });
   });
 
