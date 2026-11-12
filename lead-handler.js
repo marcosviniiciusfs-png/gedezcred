@@ -93,3 +93,59 @@ document.addEventListener('submit', function (ev) {
     window.open('https://wa.me/' + cfg.whatsapp + '?text=' + encodeURIComponent(text), '_blank');
   }
 }, true);
+
+// Telefones: prefixo +55 fixo, formatação enquanto digita e validação de DDD + número.
+// Os campos ficam sem a máscara de celular do plugin, que não aceita telefone fixo nem o prefixo.
+(function () {
+  var PREFIX = '+55 ';
+
+  // Só os dígitos do telefone nacional (DDD + número), sem o 55 do país e com no máximo 11 dígitos.
+  function national(v) {
+    var d = String(v || '').replace(/^\s*\+55/, '').replace(/\D/g, '');
+    if (d.length > 11 && d.slice(0, 2) === '55') d = d.slice(2);
+    return d.slice(0, 11);
+  }
+
+  function format(d) {
+    if (!d) return PREFIX;
+    if (d.length <= 2) return PREFIX + '(' + d + (d.length === 2 ? ') ' : '');
+    var ddd = d.slice(0, 2), num = d.slice(2);
+    var cut = '6789'.indexOf(num.charAt(0)) !== -1 ? 5 : 4; // celular (9 dígitos) ou fixo (8)
+    return PREFIX + '(' + ddd + ') ' + (num.length > cut ? num.slice(0, cut) + '-' + num.slice(cut) : num);
+  }
+
+  function check(el, mobileOnly) {
+    var n = national(el.value).length;
+    var ok = mobileOnly ? n === 11 : (n === 10 || n === 11);
+    el.setCustomValidity(ok ? '' : (mobileOnly
+      ? 'Digite o DDD e o celular com 9 dígitos.'
+      : 'Digite o DDD e o telefone com 8 ou 9 dígitos.'));
+  }
+
+  ['whatsapp', 'ligacao'].forEach(function (name) {
+    var el = document.querySelector('input[name="form_fields[' + name + ']"]');
+    if (!el) return;
+    var mobileOnly = name === 'whatsapp';
+
+    el.value = PREFIX;
+    check(el, mobileOnly);
+
+    el.addEventListener('focus', function () { if (!national(el.value)) el.value = PREFIX; });
+    el.addEventListener('input', function () {
+      el.value = format(national(el.value));
+      check(el, mobileOnly);
+    });
+    el.addEventListener('keydown', function (ev) {
+      // Apagar com Backspace sobre a máscara remove o último dígito, e não só o caractere de formatação.
+      if (ev.key === 'Backspace' && /\D$/.test(el.value)) {
+        ev.preventDefault();
+        el.value = format(national(el.value).slice(0, -1));
+        check(el, mobileOnly);
+      }
+    });
+    el.addEventListener('blur', function () {
+      if (!national(el.value)) el.value = '';
+      check(el, mobileOnly);
+    });
+  });
+})();
