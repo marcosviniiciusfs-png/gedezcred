@@ -65,6 +65,7 @@ document.addEventListener('submit', function (ev) {
         event_source_url: location.href,
         name: value('lead_name'),
         phone: value('whatsapp'),
+        phone_call: value('ligacao'),
         fbp: leadCookie('_fbp'),
         fbc: leadCookie('_fbc') || (click ? 'fb.1.' + click.t + '.' + click.id : null),
         utm: leadSession('lead_utm'),

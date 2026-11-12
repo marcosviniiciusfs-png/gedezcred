@@ -159,6 +159,7 @@ function leadPayload(env, eventId, body, nome, telefone) {
   return {
     nome,
     telefone,
+    telefone_ligacao: normalizePhone(body.phone_call) || undefined,
     tipo: env.CRM_TIPO || 'Simulação de crédito',
     email: body.email || undefined,
     origem: 'Site Gedez Cred - Simulação de crédito',
